@@ -1,0 +1,57 @@
+pub mod cli;
+pub mod util;
+
+use std::process::ExitCode;
+
+use anstream::eprintln;
+use clap::Parser;
+use crossterm::style::Stylize;
+use eyre::Result;
+use fig_log::get_log_level_max;
+use tracing::metadata::LevelFilter;
+
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+fn main() -> Result<ExitCode> {
+    color_eyre::install()?;
+
+    let mut args = std::env::args();
+    let subcommand = args.nth(1);
+    let multithread = matches!(
+        subcommand.as_deref(),
+        Some("init" | "_" | "internal" | "completion")
+    );
+
+    let parsed = match cli::Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            let _ = err.print();
+            return Ok(ExitCode::from(err.exit_code().try_into().unwrap_or(2)));
+        },
+    };
+
+    let verbose = parsed.verbose > 0;
+
+    let runtime = if multithread {
+        tokio::runtime::Builder::new_multi_thread()
+    } else {
+        tokio::runtime::Builder::new_current_thread()
+    }
+    .enable_all()
+    .build()?;
+
+    let result = runtime.block_on(parsed.execute());
+
+    match result {
+        Ok(exit_code) => Ok(exit_code),
+        Err(err) => {
+            if verbose || get_log_level_max() > LevelFilter::INFO {
+                eprintln!("{} {err:?}", "error:".bold().red());
+            } else {
+                eprintln!("{} {err}", "error:".bold().red());
+            }
+            Ok(ExitCode::FAILURE)
+        },
+    }
+}

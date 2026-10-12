@@ -1,0 +1,7 @@
+packages:
+  - proto
+  - packages/*
+allowBuilds:
+  '@bufbuild/buf': true
+  core-js: false
+  esbuild: true
