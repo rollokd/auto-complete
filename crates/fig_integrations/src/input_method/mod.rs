@@ -730,7 +730,13 @@ where
 {
     cfg_if::cfg_if! {
         if #[cfg(feature = "dispatch")] {
-            dispatch::Queue::main().exec_sync(work)
+            // Cargo feature unification also enables this in the CLI, where sync-dispatching from main deadlocks
+            let is_main: objc::runtime::BOOL = unsafe { msg_send![class!(NSThread), isMainThread] };
+            if is_main == objc::runtime::YES {
+                work()
+            } else {
+                dispatch::Queue::main().exec_sync(work)
+            }
         } else {
             work()
         }

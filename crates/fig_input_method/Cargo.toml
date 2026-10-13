@@ -13,7 +13,8 @@ workspace = true
 bundle_name = "AutoInputMethod"
 bundle_identifier = "dev.rollo.inputmethod.auto"
 input_source_identifier = "dev.rollo.inputmethod.auto"
-invisible_in_system_ui = true
+invisible_in_system_ui = false
+input_method_file_icon_key = "product_icon.icns"
 input_method_type = "palette"
 
 [build-dependencies]
